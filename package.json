@@ -1,0 +1,58 @@
+{
+  "name": "@dendra-science/worker-tasks-deriv",
+  "version": "2.0.0",
+  "description": "Worker tasks for performing dervied calculations.",
+  "license": "BSD-2-Clause-FreeBSD",
+  "author": "J. Scott Smith <scott@newleafsolutionsinc.com>",
+  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DendraScience/dendra-worker-tasks-deriv.git"
+  },
+  "scripts": {
+    "babel": "babel src -d dist",
+    "build": "npm run lint && npm run clean && npm run babel",
+    "clean": "rm -rf dist/*",
+    "lint": "eslint src",
+    "lint-test": "eslint test",
+    "test": "npm run lint-test && NODE_ENV=test mocha test --recursive --use_strict",
+    "test-gc": "npm run lint-test && NODE_ENV=test mocha test -gc --recursive --use_strict",
+    "test:build": "npm run build && npm run test",
+    "test:watch": "chokidar --initial 'src/**/*.js' 'test/**/*.js' -c 'npm run test:build'"
+  },
+  "engines": {
+    "node": ">=10.15.1"
+  },
+  "dependencies": {
+    "@dendra-science/task-machine": "0.1.2",
+    "@feathersjs/authentication-client": "^1.0.11",
+    "@feathersjs/feathers": "^3.3.1",
+    "@feathersjs/rest-client": "^1.4.7",
+    "axios": "^0.19.0",
+    "influx": "^5.5.1",
+    "localstorage-memory": "^1.0.3",
+    "lodash": "^4.17.15",
+    "luxon": "^1.19.3",
+    "mathjs": "^6.2.3",
+    "murmurhash3js": "^3.0.1",
+    "node-nats-streaming": "0.0.51"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.7.0",
+    "@babel/core": "^7.7.2",
+    "@babel/preset-env": "^7.7.1",
+    "chai": "^4.2.0",
+    "eslint": "^6.6.0",
+    "eslint-config-prettier": "^6.4.0",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-prettier": "^3.1.1",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "feathers-memory": "^3.0.2",
+    "mocha": "^6.2.2",
+    "prettier": "^1.19.1"
+  },
+  "optionalDependencies": {}
+}
