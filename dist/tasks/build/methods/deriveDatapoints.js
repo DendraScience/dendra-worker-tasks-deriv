@@ -69,10 +69,7 @@ async function deriveDatapoints(req, ctx) {
     database,
     precision: 'ms'
   };
-  return deriver(spec, (timestamp, fields) => ({
-    timestamp,
-    fields
-  }), data => {
+  return deriver(spec, null, data => {
     logger.info(`Writing (${data.length}) point(s)`, {
       measurement,
       writeOptions

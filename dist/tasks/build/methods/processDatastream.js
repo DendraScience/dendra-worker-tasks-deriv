@@ -77,6 +77,7 @@ async function processDatastream(req, ctx) {
       buildId = `${method}-${id}-${changeId}-${now.getTime()}-${idRandom()}`;
       buildSpec = {
         change,
+        change_id: changeId,
         datastream
       };
     } else {

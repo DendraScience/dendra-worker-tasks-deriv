@@ -28,7 +28,7 @@ describe('watchInflux tasks', function() {
             ack_wait: 3600000,
             durable_name: '20181223'
           },
-          sub_to_subject: 'abcd.influxChange.v2.log'
+          sub_to_subject: 'influxWrite.log'
         }
       ],
       created_at: now,
@@ -36,7 +36,7 @@ describe('watchInflux tasks', function() {
     }
   }
 
-  // const requestSubject = 'dendra.derivedBuild.v2.req.0'
+  const logSubject = 'influxWrite.log'
   const testName = 'dendra-worker-tasks-deriv UNIT_TEST'
 
   const id = {}
@@ -122,26 +122,26 @@ describe('watchInflux tasks', function() {
       })
     )._id
 
+    const config = {
+      params: {
+        query: {
+          api: 'abcd',
+          db: 'station_database',
+          fc: 'source_measurement',
+          sc: '"time", "value"',
+          utc_offset: -28800,
+          coalesce: false
+        }
+      },
+      begins_at: '2018-04-25T00:00:00.000Z',
+      ends_before: '2018-04-26T00:00:00.000Z',
+      path: '/influx/select'
+    }
+
     id.datastream = (
       await webConnection.app.service('/datastreams').create({
-        datapoints_config: [],
-        datapoints_config_built: [
-          {
-            params: {
-              query: {
-                api: 'abcd',
-                db: 'station_database',
-                fc: 'source_measurement',
-                sc: '"time", "value"',
-                utc_offset: -28800,
-                coalesce: false
-              }
-            },
-            begins_at: '2018-04-25T00:00:00.000Z',
-            ends_before: '2018-04-26T00:00:00.000Z',
-            path: '/influx/select'
-          }
-        ],
+        datapoints_config: [config],
+        datapoints_config_built: [config],
         description: testName,
         is_enabled: true,
         name: testName,
@@ -183,7 +183,7 @@ describe('watchInflux tasks', function() {
   })
 
   it('should import', function() {
-    tasks = require('../../../dist').build
+    tasks = require('../../../dist').watchInflux
 
     expect(tasks).to.have.property('sources')
   })
@@ -210,7 +210,6 @@ describe('watchInflux tasks', function() {
         expect(success).to.be.true
 
         // Verify task state
-        expect(model).to.have.property('influxReady', true)
         expect(model).to.have.property('sourcesReady', true)
         expect(model).to.have.property('stanCheckReady', false)
         expect(model).to.have.property('stanCloseReady', false)
@@ -220,13 +219,19 @@ describe('watchInflux tasks', function() {
 
         // Check for defaults
         expect(model).to.have.nested.property(
-          'sources.sources.abcd_influxChange_v2_log.some_default',
+          'sources.influxWrite_log.some_default',
           'default'
         )
       })
   })
 
-  it('should process change log writes', function() {
+  it('should process change log write', function() {
+    const service = main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+
+    service.store = {} // HACK: Reset store before test
+
     const msgStr = JSON.stringify({
       context: {
         org_slug: 'abcd'
@@ -236,19 +241,21 @@ describe('watchInflux tasks', function() {
           database: 'station_database',
           precision: 'ms'
         },
-        writes: [
+        changes: [
           {
             measurement: 'source_measurement',
+            msgSeq: 1234,
             pointsCount: 2,
             timeMax: 1524614400000,
-            timeMin: 1524614400000
+            timeMin: 1524614400000,
+            type: 'write'
           }
         ]
       }
     })
 
     return new Promise((resolve, reject) => {
-      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+      model.private.stan.publish(logSubject, msgStr, (err, guid) =>
         err ? reject(err) : resolve(guid)
       )
     })
@@ -268,26 +275,16 @@ describe('watchInflux tasks', function() {
           .to.have.property('data')
           .lengthOf(1)
 
-        expect(res).to.have.nested.property('data.0.method', 'deriveDatapoints')
+        expect(res).to.have.nested.property('data.0.dispatch_key', 'abcd')
         expect(res).to.have.nested.property(
-          'data.0.dispatch_key',
-          id.derivedDatastream
+          'data.0.method',
+          'processDatastream'
         )
+        expect(res).to.have.nested.property('data.0.spec.change_id')
+        expect(res).to.have.nested.property('data.0.spec.change.type', 'write')
         expect(res).to.have.nested.property(
-          'data.0.spec.database',
-          `derived_org_${id.org}`
-        )
-        expect(res).to.have.nested.property(
-          'data.0.spec.measurement',
-          `derived_data_${id.derivedDatastream}`
-        )
-        expect(res).to.have.nested.property(
-          'data.0.spec.sourceDatastreamId',
+          'data.0.spec.datastream_ids.0',
           id.datastream
-        )
-        expect(res).to.have.nested.property(
-          'data.0.spec.derivedDatastreamId',
-          id.derivedDatastream
         )
       })
   })

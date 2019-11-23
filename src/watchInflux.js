@@ -1,7 +1,4 @@
-"use strict";
-
 module.exports = {
-  dispatchConnection: require('./tasks/dispatchConnection'),
   sources: require('./tasks/sources'),
   stan: require('./tasks/stan'),
   stanCheck: require('./tasks/stanCheck'),
@@ -9,4 +6,4 @@ module.exports = {
   subscriptions: require('./tasks/watchInflux/subscriptions'),
   versionTs: require('./tasks/versionTs'),
   webConnection: require('./tasks/webConnection')
-};
+}

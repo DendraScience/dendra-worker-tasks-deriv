@@ -104,7 +104,7 @@ async function initDerivedDatastream(req, ctx) {
     deriverSpecs = await deriver({
       derived_datastream: datastream,
       source_datastreams: datastreamRes.data,
-      update_time: change.timeMin + (station.utc_offset | 0)
+      update_time: change.timeMin + (station.utc_offset | 0) * 1000
     });
     logger.info('Deriver specs returned', {
       deriverSpecs

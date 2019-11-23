@@ -68,17 +68,13 @@ async function deriveDatapoints(req, ctx) {
     precision: 'ms'
   }
 
-  return deriver(
-    spec,
-    (timestamp, fields) => ({ timestamp, fields }),
-    data => {
-      logger.info(`Writing (${data.length}) point(s)`, {
-        measurement,
-        writeOptions
-      })
-      return influx.writeMeasurement(measurement, data, writeOptions)
-    }
-  )
+  return deriver(spec, null, data => {
+    logger.info(`Writing (${data.length}) point(s)`, {
+      measurement,
+      writeOptions
+    })
+    return influx.writeMeasurement(measurement, data, writeOptions)
+  })
 }
 
 module.exports = async (...args) => {

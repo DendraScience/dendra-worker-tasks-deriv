@@ -21,18 +21,10 @@ function toWYDateTime(time) {
   });
 }
 
-function defaultPointCb({
-  lt,
-  o,
-  v
-}, {
-  vSum
-}) {
+function defaultPointCb(timestamp, fields) {
   return {
-    lt,
-    o,
-    v,
-    vSum
+    timestamp,
+    fields
   };
 }
 
@@ -56,10 +48,10 @@ async function init({
     specs.push({
       derived_datastream_id: derivedDatastreamId,
       source_datastream_id: sourceDatastreamId,
-      start_time: toWYDateTime(updateTime),
+      start_time: toWYDateTime(updateTime).toMillis(),
       until_time: toWYDateTime(updateTime).plus({
         year: 1
-      }),
+      }).toMillis(),
       update_time: updateTime
     });
     return specs;
@@ -191,7 +183,7 @@ async function run({
       vSum = math.add(vSum, point.v);
       data.push(pointCb(point.lt, {
         utc_offset: point.o,
-        v_sum: math.number(vSum)
+        value: math.number(vSum)
       }));
     }
 
@@ -203,8 +195,11 @@ async function run({
   return {
     count,
     pages,
-    startTime,
-    untilTime
+    from_time: fromTime,
+    start_time: startTime,
+    until_time: untilTime,
+    update_time: updateTime,
+    v_sum: vSum
   };
 }
 

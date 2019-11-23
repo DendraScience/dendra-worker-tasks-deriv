@@ -9,6 +9,6 @@
  */
 // Named exports for convenience
 module.exports = {
-  build: require('./build') // watchInflux: require('./watchInflux')
-
+  build: require('./build'),
+  watchInflux: require('./watchInflux')
 };

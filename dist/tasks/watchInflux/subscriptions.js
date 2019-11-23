@@ -69,7 +69,7 @@ function handleMessage(msg) {
 
 module.exports = {
   guard(m) {
-    return !m.subscriptionsError && m.private.dispatchConnection && m.private.webConnection && m.private.stan && m.stanConnected && m.private.influx && m.sourcesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
+    return !m.subscriptionsError && m.private.webConnection && m.private.stan && m.stanConnected && m.sourcesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
   },
 
   execute(m, {
@@ -77,7 +77,6 @@ module.exports = {
   }) {
     const {
       stan,
-      dispatchConnection,
       webConnection
     } = m.private;
     const {
@@ -87,13 +86,12 @@ module.exports = {
       passport
     } = webConnection.app;
     const datastreamService = webConnection.app.service('/datastreams');
-    const derivedBuildService = dispatchConnection.app.service('/derived-builds');
     const userService = webConnection.app.service('/users');
+    const derivedBuildService = m.$app.get('connections').dispatch.app.service('/derived-builds');
     const subs = [];
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey];
       const {
-        influx_api: influxAPI,
         sub_options: subOptions,
         sub_to_subject: subSubject
       } = source;
@@ -114,7 +112,6 @@ module.exports = {
           authenticate,
           datastreamService,
           derivedBuildService,
-          influxAPI,
           logger,
           m,
           passport,

@@ -17,13 +17,8 @@ function toWYDateTime(time) {
     .plus({ months: 9 })
 }
 
-function defaultPointCb({ lt, o, v }, { vSum }) {
-  return {
-    lt,
-    o,
-    v,
-    vSum
-  }
+function defaultPointCb(timestamp, fields) {
+  return { timestamp, fields }
 }
 
 async function init(
@@ -50,8 +45,10 @@ async function init(
     specs.push({
       derived_datastream_id: derivedDatastreamId,
       source_datastream_id: sourceDatastreamId,
-      start_time: toWYDateTime(updateTime),
-      until_time: toWYDateTime(updateTime).plus({ year: 1 }),
+      start_time: toWYDateTime(updateTime).toMillis(),
+      until_time: toWYDateTime(updateTime)
+        .plus({ year: 1 })
+        .toMillis(),
       update_time: updateTime
     })
 
@@ -187,7 +184,7 @@ async function run(
       const point = datapoints.data[i]
       vSum = math.add(vSum, point.v)
       data.push(
-        pointCb(point.lt, { utc_offset: point.o, v_sum: math.number(vSum) })
+        pointCb(point.lt, { utc_offset: point.o, value: math.number(vSum) })
       )
     }
 
@@ -197,7 +194,15 @@ async function run(
     pages++
   }
 
-  return { count, pages, startTime, untilTime }
+  return {
+    count,
+    pages,
+    from_time: fromTime,
+    start_time: startTime,
+    until_time: untilTime,
+    update_time: updateTime,
+    v_sum: vSum
+  }
 }
 
 module.exports = ctx => {

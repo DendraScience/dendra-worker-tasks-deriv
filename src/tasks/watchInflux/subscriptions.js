@@ -61,11 +61,9 @@ module.exports = {
   guard(m) {
     return (
       !m.subscriptionsError &&
-      m.private.dispatchConnection &&
       m.private.webConnection &&
       m.private.stan &&
       m.stanConnected &&
-      m.private.influx &&
       m.sourcesTs === m.versionTs &&
       m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
@@ -73,23 +71,19 @@ module.exports = {
   },
 
   execute(m, { logger }) {
-    const { stan, dispatchConnection, webConnection } = m.private
+    const { stan, webConnection } = m.private
     const { authenticate } = webConnection
     const { passport } = webConnection.app
     const datastreamService = webConnection.app.service('/datastreams')
-    const derivedBuildService = dispatchConnection.app.service(
-      '/derived-builds'
-    )
     const userService = webConnection.app.service('/users')
+    const derivedBuildService = m.$app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey]
-      const {
-        influx_api: influxAPI,
-        sub_options: subOptions,
-        sub_to_subject: subSubject
-      } = source
+      const { sub_options: subOptions, sub_to_subject: subSubject } = source
 
       try {
         const opts = stan.subscriptionOptions()
@@ -113,7 +107,6 @@ module.exports = {
             authenticate,
             datastreamService,
             derivedBuildService,
-            influxAPI,
             logger,
             m,
             passport,

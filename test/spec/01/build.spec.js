@@ -10,7 +10,7 @@ const axios = require('axios')
 const murmurHash3 = require('murmurhash3js')
 
 describe('build tasks', function() {
-  this.timeout(180000)
+  this.timeout(360000)
 
   const now = new Date()
   const hostname = 'test-hostname-0'
@@ -44,6 +44,11 @@ describe('build tasks', function() {
   const testName = 'dendra-worker-tasks-deriv UNIT_TEST'
 
   const id = {}
+  const date = {
+    wy2014: '2014-10-01T00:00:00.000Z'
+  }
+  const changeTime = new Date('2015-06-01T08:00:00.000Z').getTime()
+  const updateTime = new Date('2015-06-01T00:00:00.000Z').getTime()
   const webConnection = {}
 
   const authWebConnection = async () => {
@@ -267,6 +272,12 @@ describe('build tasks', function() {
   })
 
   it('should process initDerivedDatastream request', function() {
+    const service = main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+
+    service.store = {} // HACK: Reset store before test
+
     const msgStr = JSON.stringify({
       _id: 'init-derived-datastream-1234',
       method: 'initDerivedDatastream',
@@ -326,11 +337,12 @@ describe('build tasks', function() {
           .to.have.property('data')
           .lengthOf(4)
 
-        expect(res).to.have.nested.property('data.0.method', 'deriveDatapoints')
+        // Spot check the first one
         expect(res).to.have.nested.property(
           'data.0.dispatch_key',
           derivedDatastream._id
         )
+        expect(res).to.have.nested.property('data.0.method', 'deriveDatapoints')
         expect(res).to.have.nested.property(
           'data.0.spec.database',
           `derived_org_${id.org}`
@@ -340,11 +352,11 @@ describe('build tasks', function() {
           `derived_data_${id.derivedDatastream}`
         )
         expect(res).to.have.nested.property(
-          'data.0.spec.sourceDatastreamId',
+          'data.0.spec.source_datastream_id',
           id.datastream
         )
         expect(res).to.have.nested.property(
-          'data.0.spec.derivedDatastreamId',
+          'data.0.spec.derived_datastream_id',
           id.derivedDatastream
         )
 
@@ -365,8 +377,8 @@ describe('build tasks', function() {
     })
   })
 
-  it('should wait for 90 seconds', function() {
-    return new Promise(resolve => setTimeout(resolve, 90000))
+  it('should wait for 120 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 120000))
   })
 
   it('should find derived datapoints', function() {
@@ -382,16 +394,246 @@ describe('build tasks', function() {
         }
       })
       .then(res => {
-        /* eslint-disable-next-line no-console */
-        console.log('>>>', res)
+        expect(res)
+          .to.have.property('data')
+          .lengthOf(100)
 
-        // expect(res)
-        //   .to.have.property('data')
-        //   .lengthOf(2)
-        //   .and.deep.include.ordered.members([
-        //     { t: '2018-05-09T19:00:00.000Z', o: -28800, v: 17.25 },
-        //     { t: '2018-05-09T19:10:00.000Z', o: -28800, v: 15.99 }
-        //   ])
+        // Spot check the first one
+        expect(res).to.have.nested.property(
+          'data.0.lt',
+          '2015-03-25T23:00:00.000'
+        )
+        expect(res).to.have.nested.property(
+          'data.0.t',
+          '2015-03-26T07:00:00.000Z'
+        )
+        expect(res).to.have.nested.property('data.0.v', 0)
       })
+  })
+
+  it('should process processDatastream request w/ change', function() {
+    const service = main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+
+    service.store = {} // HACK: Reset store before test
+
+    const msgStr = JSON.stringify({
+      _id: 'process-datastream-1234',
+      method: 'processDatastream',
+      spec: {
+        change: {
+          measurement: 'source_measurement',
+          msgSeq: 1234,
+          pointsCount: 2,
+          timeMax: 1524614400000,
+          timeMin: 1524614400000,
+          type: 'write'
+        },
+        change_id: '1234-1',
+        datastream_ids: [id.datastream]
+      }
+    })
+
+    return new Promise((resolve, reject) => {
+      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
+    })
+  })
+
+  it('should wait for 5 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should verify derived builds after processDatastream w/ change', function() {
+    return main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+      .find()
+      .then(res => {
+        expect(res)
+          .to.have.property('data')
+          .lengthOf(1)
+
+        expect(res).to.have.nested.property(
+          'data.0.method',
+          'initDerivedDatastream'
+        )
+        expect(res).to.have.nested.property('data.0.spec.change_id')
+        expect(res).to.have.nested.property('data.0.spec.change.type', 'write')
+        expect(res).to.have.nested.property(
+          'data.0.spec.datastream._id',
+          derivedDatastream._id
+        )
+      })
+  })
+
+  it('should process initDerivedDatastream request w/ change', function() {
+    const service = main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+
+    service.store = {} // HACK: Reset store before test
+
+    const msgStr = JSON.stringify({
+      _id: 'init-derived-datastream-1234',
+      method: 'initDerivedDatastream',
+      spec: {
+        change: {
+          measurement: 'source_measurement',
+          msgSeq: 1234,
+          pointsCount: 2,
+          timeMax: changeTime,
+          timeMin: changeTime,
+          type: 'write'
+        },
+        change_id: '1234-1',
+        datastream: derivedDatastream
+      }
+    })
+
+    return new Promise((resolve, reject) => {
+      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
+    })
+  })
+
+  it('should wait for 5 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should verify derived builds after initDerivedDatastream w/ change', function() {
+    return main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+      .find()
+      .then(res => {
+        expect(res)
+          .to.have.property('data')
+          .lengthOf(1)
+
+        expect(res).to.have.nested.property(
+          'data.0.dispatch_key',
+          derivedDatastream._id
+        )
+        expect(res).to.have.nested.property('data.0.method', 'deriveDatapoints')
+        expect(res).to.have.nested.property(
+          'data.0.spec.database',
+          `derived_org_${id.org}`
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.measurement',
+          `derived_data_${id.derivedDatastream}`
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.source_datastream_id',
+          id.datastream
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.derived_datastream_id',
+          id.derivedDatastream
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.start_time',
+          new Date(date.wy2014).getTime()
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.update_time',
+          updateTime
+        )
+
+        derivedBuild = res.data[0]
+      })
+  })
+
+  it('should process deriveDatapoints request w/ update_time', function() {
+    if (!derivedBuild)
+      return Promise.reject(new Error('Undefined derivedBuild'))
+
+    const msgStr = JSON.stringify(derivedBuild)
+
+    return new Promise((resolve, reject) => {
+      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
+    })
+  })
+
+  it('should wait for 120 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 120000))
+  })
+
+  it('should process processDatastream request w/ source datastream', function() {
+    const service = main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+
+    service.store = {} // HACK: Reset store before test
+
+    const msgStr = JSON.stringify({
+      _id: 'process-datastream-1234',
+      method: 'processDatastream',
+      spec: {
+        datastream: {
+          _id: id.datastream
+        }
+      }
+    })
+
+    return new Promise((resolve, reject) => {
+      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
+    })
+  })
+
+  it('should wait for 5 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should verify derived builds after processDatastream w/ source datastream', function() {
+    return main.app
+      .get('connections')
+      .dispatch.app.service('/derived-builds')
+      .find()
+      .then(res => {
+        expect(res)
+          .to.have.property('data')
+          .lengthOf(1)
+
+        expect(res).to.have.nested.property(
+          'data.0.method',
+          'initDerivedDatastream'
+        )
+        expect(res).to.have.nested.property(
+          'data.0.spec.datastream._id',
+          derivedDatastream._id
+        )
+      })
+  })
+
+  it('should process destroyDerivedDatastream request', function() {
+    const msgStr = JSON.stringify({
+      _id: 'destroy-derived-datastream-1234',
+      method: 'destroyDerivedDatastream',
+      spec: {
+        datastream: {
+          _id: id.derivedDatastream,
+          organization_id: id.org
+        }
+      }
+    })
+
+    return new Promise((resolve, reject) => {
+      model.private.stan.publish(requestSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
+    })
+  })
+
+  it('should wait for 5 seconds', function() {
+    return new Promise(resolve => setTimeout(resolve, 5000))
   })
 })
