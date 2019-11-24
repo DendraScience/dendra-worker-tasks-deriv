@@ -153,10 +153,12 @@ async function initDerivedDatastream(req, ctx) {
       database,
       precision: 'ms'
     }
-    logger.info('Deleting all measurement data', { measurement, queryOptions })
+    const queryStr = `DELETE FROM ${measurement}`
+
+    logger.info('Deleting all measurement data', { queryOptions, queryStr })
 
     try {
-      await influx.query(`DELETE FROM ${measurement}`, queryOptions)
+      await influx.query(queryStr, queryOptions)
     } catch (err) {
       if (err.message.includes('database not found')) logger.warn(err.message)
       else throw err

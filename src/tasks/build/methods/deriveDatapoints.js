@@ -12,7 +12,8 @@ async function deriveDatapoints(req, ctx) {
     derivation_method: derivationMethod,
     measurement,
     start_time: startTime,
-    until_time: untilTime
+    until_time: untilTime,
+    update_time: updateTime
   } = spec
 
   if (!(database && derivationMethod && measurement))
@@ -40,17 +41,16 @@ async function deriveDatapoints(req, ctx) {
     database,
     precision: 'ms'
   }
+  const queryStr = `DELETE FROM ${measurement} WHERE time >= ${
+    updateTime === undefined ? startTime : updateTime
+  } AND time < ${untilTime}`
+
   logger.info('Deleting measurement data', {
-    measurement,
     queryOptions,
-    startTime,
-    untilTime
+    queryStr
   })
 
-  await influx.query(
-    `DELETE FROM ${measurement} WHERE time >= ${startTime} AND TIME < ${untilTime}`,
-    queryOptions
-  )
+  await influx.query(queryStr, queryOptions)
 
   /*
     Create and run deriver instance.
