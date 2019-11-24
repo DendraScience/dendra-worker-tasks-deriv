@@ -83,7 +83,11 @@ module.exports = {
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey]
-      const { sub_options: subOptions, sub_to_subject: subSubject } = source
+      const {
+        queue_group: queueGroup,
+        sub_options: subOptions,
+        sub_to_subject: subSubject
+      } = source
 
       try {
         const opts = stan.subscriptionOptions()
@@ -99,7 +103,10 @@ module.exports = {
             opts.setDurableName(subOptions.durable_name)
         }
 
-        const sub = stan.subscribe(subSubject, opts)
+        const sub =
+          typeof queueGroup === 'string'
+            ? stan.subscribe(subSubject, queueGroup, opts)
+            : stan.subscribe(subSubject, opts)
 
         sub.on(
           'message',
