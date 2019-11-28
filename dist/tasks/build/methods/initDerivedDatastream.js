@@ -75,7 +75,15 @@ async function initDerivedDatastream(req, ctx) {
     query
   });
   /*
-    Create and init deriver instance.
+    Fetch the station.
+   */
+
+  logger.info('Getting station', {
+    _id: datastream.station_id
+  });
+  const station = await stationService.get(datastream.station_id);
+  /*
+    Create and init the deriver instance.
    */
 
   const derivationMethod = datastream.derivation_method;
@@ -91,28 +99,24 @@ async function initDerivedDatastream(req, ctx) {
   const measurement = `derived_data_${datastream._id}`;
   let deriverSpecs;
   let patchRes;
+  /*
+    Either:
+    - Do a partial build if there's an associated change in the spec
+    - Or, set the datapoints config and do a full build
+     NOTE: Changes are in UTC, derived datastreams are stored in local time.
+   */
 
   if (change) {
-    /*
-      Determine update time based on the change extents. Init the deriver.
-     */
-    // Changes are in UTC, so fetch the station and do a quick convert
-    logger.info('Getting station', {
-      _id: datastream.station_id
-    });
-    const station = await stationService.get(datastream.station_id);
     deriverSpecs = await deriver({
       derived_datastream: datastream,
       source_datastreams: datastreamRes.data,
-      update_time: change.timeMin + (station.utc_offset | 0) * 1000
+      // Specify an update time based on the earliest change
+      update_time: change.timeMin + station.utc_offset * 1000
     });
     logger.info('Deriver specs returned', {
       deriverSpecs
     });
   } else {
-    /*
-      Init the deriver.
-     */
     deriverSpecs = await deriver({
       derived_datastream: datastream,
       source_datastreams: datastreamRes.data
@@ -132,8 +136,8 @@ async function initDerivedDatastream(req, ctx) {
           db: database,
           fc: measurement,
           coalesce: false,
-          // NOTE: For now assume all dervied datastreams are in local time
-          local: true
+          local: true,
+          time_adjust: station.utc_offset
         }
       },
       path: '/influx/select'
