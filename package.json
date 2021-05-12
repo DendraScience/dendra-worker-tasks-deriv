@@ -33,7 +33,7 @@
     "localstorage-memory": "^1.0.3",
     "lodash": "^4.17.15",
     "luxon": "^1.19.3",
-    "mathjs": "^6.2.3",
+    "mathjs": "^7.5.1",
     "murmurhash3js": "^3.0.1",
     "node-nats-streaming": "0.0.51"
   },
