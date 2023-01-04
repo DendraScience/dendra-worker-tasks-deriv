@@ -182,9 +182,9 @@ async function run({
       const point = datapoints.data[i];
       /* eslint-disable-next-line no-console */
 
-      console.log('vSum, point.v', {
+      console.log('vSum, point', {
         vSum,
-        v: point.v
+        point
       });
       vSum = math.add(vSum, math.bignumber(point.v));
       data.push(pointCb(point.lt, {
