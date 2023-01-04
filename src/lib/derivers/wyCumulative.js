@@ -182,7 +182,7 @@ async function run(
 
     for (let i = 0; i < length; i++) {
       const point = datapoints.data[i]
-      vSum = math.add(vSum, point.v)
+      vSum = math.add(vSum, math.bignumber(point.v))
       data.push(
         pointCb(point.lt, { utc_offset: point.o, value: math.number(vSum) })
       )
