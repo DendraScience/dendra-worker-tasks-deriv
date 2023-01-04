@@ -180,12 +180,6 @@ async function run({
 
     for (let i = 0; i < length; i++) {
       const point = datapoints.data[i];
-      /* eslint-disable-next-line no-console */
-
-      console.log('vSum, point', {
-        vSum,
-        point
-      });
       vSum = math.add(vSum, math.bignumber(point.v));
       data.push(pointCb(point.lt, {
         utc_offset: point.o,
